@@ -1,0 +1,41 @@
+{% extends 'base/layout.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+    <div class="col-4 mx-auto mt-5 shadow p-3 mb-5 bg-body rounded">
+        <h4 class="text-info border p-2 mb-2">Mechanic Login Here</h4>
+        {% for message in messages %}
+            {% if message.tags == "info" %}
+                <div class="alert alert-info">
+                    {{message}}
+                </div>
+            {% else %}
+                <div class="alert alert-danger">
+                    {{message}}
+                </div>
+            {% endif %}
+            
+            
+        {% endfor %}
+        <form action="" method="POST">
+        {% csrf_token %}
+        {% for field in form %}
+            <div class="mb-3">
+                {{field.label_tag}}
+                {{field}}
+            </div>
+        {% endfor %}
+        {% for error in form.non_field_errors %}
+            <small class="text-danger d-block">
+                {{error}}
+            </small>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary">Login</button>
+        </form>
+        <hr>
+        <a href="{% url 'mechanic_signup' %}">Click To SignUp</a>
+    </div>
+    </div>
+</div>
+{% endblock content %}

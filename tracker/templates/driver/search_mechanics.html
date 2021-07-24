@@ -1,0 +1,177 @@
+
+{% extends 'driver/layout.html' %}
+
+{% block inner_content %}
+    <div class="row">
+        <div class="col-3 p-3">
+            <div>
+                <form id="search_range_form">
+                    <div class="mb-3">
+                        <label for="id_distance">Distance Range</label>
+                        <input type="number" class="form-control" name="search_range" placeholder="enter distance range" required />
+    
+                    </div>
+                    <button type="submit" class="btn btn-outline-warning">search</button>
+    
+                </form>
+            </div>
+            <div class="mt-5">
+                <table class="table" id="feedback_table">
+                    <thead>
+                        <tr>
+                          <th scope="col">#</th>
+                          <th scope="col">Driver</th>
+                          <th scope="col">Feedback</th>
+                         
+                        </tr>
+                    </thead>
+                    <tbody>
+                       
+                    </tbody>
+                </table>
+            </div>
+            
+        </div>
+        <div class="col-9 p-3">
+            <div id="mymap" style="height:85vh;">
+            </div>
+            
+        </div>
+    </div>
+
+    <script>
+        
+        let routing = null;
+
+        const curr_location = {
+            'lat':26.820725377771634,
+            'lon':87.29055853999236
+        }
+        let map = null;
+        const fetchMechanics = ()=>{
+            const url = `http://${window.location.host}/tracker/driver/fetch-mechanic-data/`;
+            fetch(url).then(res=>res.json()).then(json_res=>{
+                show_marker_list(json_res);
+            })
+        }
+        window.onload = fetchMechanics();
+        const showMap = ()=>{
+            if (map){
+                map.remove();
+                map = null;
+            }
+
+         map = new L.map('mymap').setView([curr_location.lat,curr_location.lon], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        let marker = L.marker([curr_location.lat,curr_location.lon]).addTo(map)
+            .bindPopup('Driver Location')
+            .openPopup();
+       
+        
+        }
+        const mechanic_detail_info = data=>{
+            let services_list = '';
+            for (let service of data.mechanic_profile.services){
+                
+                services_list +=service.service_name + ', ';
+            }
+            return (
+                `<b>Name </b> ${data.full_name}<br/> <b>Contact No</b> ${data.mechanic_profile.contact_no}<br/> <b>Services </b> ${services_list}`
+            )
+        }
+        const show_marker_list = mechanics=>{
+            showMap();
+            var greenIcon = new L.Icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+            });
+            for(let m of mechanics){
+               
+                marker = new L.marker([m.mechanic_profile.latitude,m.mechanic_profile.longitude],{icon:greenIcon}).bindPopup(
+                    mechanic_detail_info(m)
+                ).addTo(map).on('click',e=>get_marker(e,m));
+            }
+        }
+      const get_marker = (e,mechanic)=>{
+          
+          const latlng = e.latlng;
+          
+          show_routing(latlng);
+        //   console.log(mechanic);
+          const url = `http://localhost:8000/tracker/feedback?mechanic=${mechanic.id}`;
+          fetch(url).then(res=>res.json()).then(json_res=>{
+        
+              show_feedbacks(json_res);
+          })
+          
+      }
+    
+      const show_routing = (latlng)=>{
+            if(routing){
+                map.removeControl(routing);
+                routing=null;
+            }
+
+            routing= L.Routing.control({
+            waypoints: [
+                L.latLng(curr_location.lat, curr_location.lon),
+                L.latLng(latlng.lat, latlng.lng)
+            ]
+            }).addTo(map); 
+            
+           
+      }
+      const show_feedbacks = feedbacks=>{
+        const feedback_table = document.getElementById('feedback_table');
+        let rows = feedback_table.rows.length-1;
+        while(rows){
+            feedback_table.deleteRow(rows);
+            rows--;
+        }
+        
+        let sno = 0;
+          for(let feedback of feedbacks){
+              sno++;
+              feedback_table.innerHTML +=`<tr>
+                                            <td>${sno}</td>
+                                            <td class="text-bold">${feedback.driver.full_name}</td>
+                                            <td>
+                                                <small> ${feedback.message} </small>
+                                            </td>
+                                        </tr>`;
+          }
+          
+      }
+    //   
+      const search_range_form = document.getElementById('search_range_form');
+      search_range_form.addEventListener('submit',e=>{
+          e.preventDefault();
+          const search_range = e.target.search_range.value;
+          const d = {
+              search_range:search_range,
+              curr_location:curr_location
+          }
+          const params = {
+              method:'POST',
+              headers:{
+                "Content-Type":"application/json"
+              },
+              body:JSON.stringify(d)
+          }
+          const url = `http://${window.location.host}/tracker/driver/fetch-mechanic-data/`;
+            fetch(url,params).then(res=>res.json()).then(json_res=>{
+                show_marker_list(json_res);
+                console.log(json_res)
+            })
+          
+      })
+      
+    </script>
+{% endblock inner_content %}

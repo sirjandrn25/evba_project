@@ -1,0 +1,230 @@
+{% extends 'base/layout.html' %}
+
+{% block title %}
+Mechanic App
+{% endblock title %}
+
+
+{% block content %}
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container">
+    <a class="navbar-brand" href="#">Mechanic App</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+         <li class="nav-item">
+          <a class="nav-link" href="#">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'mechanic_account' %}">Account</a>
+        </li>
+         <li class="nav-item">
+          <a class="nav-link" href="{% url 'mechanic_logout' %}">Logout</a>
+        </li>
+       
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!--<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#myModal">
+  Launch demo modal
+</button> -->
+<!-- Modal -->
+<div class="modal fade" id="myModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-fullscreen">
+    <div class="modal-content">
+      <div class="modal-header">
+     
+       {% csrf_token %}
+      
+     
+        <h5 class="modal-title" id="exampleModalLabel">Driver Help Request</h5>
+        
+        
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-4">
+            <div class="p-3">
+              <h4>Driver : <span class="text-secondary" id="driver_name"><span></h4>
+              <h5>Vehicle Type : <span class="text-info" id="vehicle_type"></span></h5>
+              <h5>Service : <span class="text-warning" id="service"></span></h5>
+              <h5>Problem Description : <span class="text-info" id="problem_desc"></span></h5>
+
+
+            </div>
+          </div>
+          <div class="col-8">
+          <strong class="mr-5 text-secondary">Time Remaining <span id="dynamic_time" class="text-primary mx-3">30</span> seconds</strong>
+            <div id="mymap" style="height:80vh;">
+
+            </div>
+            
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+       <button type="button" class="btn btn-warning" id="id_cancel_btn" onclick="send_response(false)">Cancel</button>
+          <button type="button" class="btn btn-success" id="id_accept_btn" onclick="send_response(true)">Accept</button>
+      </div>
+     
+    </div>
+  </div>
+</div>
+</div>
+<div class="container-fluid">
+    {% block inner_content %}
+        
+    {% endblock inner_content %}
+
+</div>
+
+<script>
+  const url = `ws://${window.location.host}/ws/mechanic/notifications/`;
+  const ws = new WebSocket(url);
+  let data = {};
+  let routing = null;
+  let map;
+  let marker = null;
+  let time_control = null;
+  let myModal = null;
+  
+
+  
+ws.onopen = event=>{
+    console.log("connecting ........");
+}
+
+ws.onmessage = event=>{
+  
+    console.log("messaging .....");
+    data = JSON.parse(event.data);
+    console.log(data);
+    showModel();
+    let time = 30;
+    time_control = setInterval(()=>{
+      document.getElementById('dynamic_time').innerText = time--;
+      if(time===0){
+        send_response(false);
+      }
+    },1000);
+   
+    
+    
+
+}
+
+
+ws.onerror = event=>{
+  console.log("error message...");
+}
+ws.onclose = event=>{
+  console.log("closing message ...");
+}
+
+const get_csrf_token = ()=>{
+  const input_list = document.getElementsByTagName('input');
+  
+  for(let input of input_list){
+    if(input.name==="csrfmiddlewaretoken"){
+      return input.value;
+    }
+  }
+
+}
+
+const send_response = (status)=>{
+  console.log(status);
+  clearInterval(time_control);
+  if(status){
+    document.getElementById('id_cancel_btn').setAttribute('disabled',true);
+    document.getElementById('id_accept_btn').setAttribute('disabled',true);
+  }else{
+    myModal.hide();
+  }
+ 
+  const url = `http://${window.location.host}/tracker/mechanic/send-response/`;
+  console.log({...data,response:status})
+  const params = {
+    method:'POST',
+    headers:{
+      
+      'Content-Type':'application/json',
+      'X-CSRFToken':get_csrf_token(),
+    },
+    body:JSON.stringify({...data,is_mechanic_accept:status})
+  }
+  fetch(url,params).then(res=>res.json()).then(json_data=>{
+    console.log(json_data);
+  })
+
+
+}
+
+const displayMsg = ()=>{
+  
+  document.getElementById("driver_name").innerText = data.driver.full_name;
+  document.getElementById("vehicle_type").innerText = data.vehicle_type;
+  document.getElementById("service").innerText = data.service.service_name;
+  document.getElementById("problem_desc").innerText = data.problem_desc;
+}
+
+const showModel = ()=>{
+	myModal =  new bootstrap.Modal(document.getElementById('myModal'), {
+				  keyboard: false
+					});
+        myModal.show();
+    setTimeout(()=>{
+      displayMsg();
+      showMap();
+    },1000);
+}
+
+const showMap = ()=>{
+  if (map){
+    map=null;
+  }
+  let latlng = [26.6635544183563, 87.27502087175422];
+  map = L.map('mymap').setView(latlng, 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+         
+  show_routing();
+}
+const show_routing = ()=>{
+    if(routing){
+      map.removeControl(routing);
+      routing = null;
+    }
+    const driver_latlng = [data.curr_driver_lat,data.curr_driver_long]
+    let mechanic_latlng = [data.mechanic.mechanic_profile.latitude, data.mechanic.mechanic_profile.longitude]
+    routing = L.Routing.control({
+    
+      waypoints: [
+        L.latLng(driver_latlng),
+        L.latLng(mechanic_latlng)
+      ]
+    }).addTo(map);
+    marker = new L.marker(mechanic_latlng).addTo(map).bindPopup(`<b>Mechanic</b><br/>${data.mechanic.mechanic_profile.address_name}`).openPopup();
+  
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${driver_latlng[0]}&lon=${driver_latlng[1]}`;
+  
+  fetch(url).then(res=>res.json()).then(json_res=>{
+    const address=json_res.display_name;
+    marker = new L.marker(driver_latlng).addTo(map).bindPopup(`<b>Driver </b>${data.driver.full_name}<br/><b>contact no: ${data.driver.driver_profile.contact_no} </b>${data.driver.driver_profile.contact_no}<br/>${address}`).openPopup();
+  })
+
+
+}
+
+
+</script>
+
+{% endblock content %}

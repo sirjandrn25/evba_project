@@ -1,0 +1,18 @@
+{% extends 'base/layout.html' %}
+
+
+{% block content %}
+<div class="container mt-5 py-5">
+    <div class="row">
+        <div class="col-5 mx-auto text-center py-5">
+            <a href="{% url 'driver_login' %}" target="_blank" class="btn btn-outline-secondary">Driver Login</a>
+            <hr>
+            <a href="{% url 'mechanic_login' %}" target="_blank" class="btn btn-outline-secondary">Mechanic Login</a>
+            <hr>
+            <a href="http://localhost:8000/admin" target="_blank" class="btn btn-outline-secondary">Admin Login</a>
+            <hr>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}

@@ -1,0 +1,78 @@
+{% extends 'driver/layout.html' %}
+
+{% block title %}
+Account
+{% endblock title %}
+{% block inner_content %}
+
+<div class="container mt-3 shadow p-5 mb-5 bg-body rounded" style="height:660px;" >
+    <form action="" method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-8">
+                {% for message in messages %}
+                  <div class="alert alert-info">
+                      {{message}}
+                  </div>
+                {% endfor %}
+                <!-- for driver fields -->
+                <div class="row mb-3">
+                    <div class="col-6">
+                        {{driver_form.full_name.label_tag}}
+                        {{driver_form.full_name}}
+                    </div>
+                    <div class="col-6">
+                        {{driver_form.email.label_tag}}
+                        {{driver_form.email}}
+                    </div>
+                    
+                </div>
+                <div class="row mb-3">
+                    <div class="col-6">
+                        {{driver_form.license_no.label_tag}}
+                        {{driver_form.license_no}}
+                    </div>
+                    <div class="col-6">
+                        {{driver_profile_form.gender.label_tag}}
+                        {{driver_profile_form.gender}}
+                    </div>
+                    
+                </div>
+                <div class="row mb-3">
+                    <div class="col-6">
+                        {{driver_profile_form.birth_date.label_tag}}
+                        {{driver_profile_form.birth_date}}
+                    </div>
+                    <div class="col-6">
+                        {{driver_profile_form.contact_no.label_tag}}
+                        {{driver_profile_form.contact_no}}
+                    </div>
+                    
+                </div>
+                <div class="mb-3">
+                    {{driver_profile_form.address.label_tag}}
+                    {{driver_profile_form.address}}
+                </div>
+                <button type="submit" class="btn btn-warning">Save</button>
+            </div>
+            <div class="col-3">
+                
+                {% if driver.driver_profile.avatar %}
+                <img src="{{driver.driver_profile.avatar.url}}" class="border rounded bg-light img-fluid" style="height: 250px; width: 250px;" />
+                <a href="{{driver.driver_profile.avatar.url}}" target="blank">{{driver.driver_profile.avatar.url}}</a>
+                {% else %}
+                <img src="" class="border rounded bg-light img-fluid" style="height: 250px; width: 250px;" />
+                {% endif %}
+                
+                    
+                
+                <div class="mt-2">
+                    
+                    {{driver_profile_form.avatar}}
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+{% endblock inner_content %}

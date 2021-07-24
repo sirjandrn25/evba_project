@@ -1,0 +1,41 @@
+{% extends 'base/layout.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+    <div class="col-5 mx-auto mt-5 shadow p-3 mb-5 bg-body rounded">
+        <h4 class="text-info border p-2 text-center">Driver SignUp Here</h4>
+        {% for message in messages %}
+            <div class="alert alert-info">
+                {{message}}
+            </div>
+        {% endfor %}
+        <form action="" method="POST">
+        {% csrf_token %}
+            {% for field in form %}
+            <div class="mb-3">
+                {{field.label_tag}}
+                {{field}}
+                {% for error in field.errors %}
+                <small class="text-danger">
+                    {{error}}
+                </small>
+                {% endfor %}
+            </div>
+            {% endfor %}
+           
+            {% for error in form.non_field_errors %}
+                <small class="text-danger d-block">
+                    {{error}}
+                </small>
+            {% endfor %}
+            
+            <button type="submit" class="btn btn-success">Create An Account</button>
+            
+            <hr>
+            <a href="{% url 'driver_login' %}">Click To Login</a>
+        </form>
+    </div>
+    </div>
+</div>
+{% endblock content %}

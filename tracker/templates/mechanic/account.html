@@ -1,0 +1,86 @@
+{% extends 'mechanic/layout.html' %}
+
+
+
+{% block inner_content %}
+<div class="container mt-4 shadow p-5 mb-3 bg-body rounded" style="height:630px; width:100%;">
+        <form action="" method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-8">
+                    {% for message in messages %}
+                      <div class="alert alert-info">
+                          {{message}}
+                      </div>
+                    {% endfor %}
+                    <!-- for driver fields -->
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            {{mechanic_form.full_name.label_tag}}
+                            {{mechanic_form.full_name}}
+                        </div>
+                        <div class="col-6">
+                            {{mechanic_form.email.label_tag}}
+                            {{mechanic_form.email}}
+                        </div>
+                        
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            {{mechanic_form.pan_no.label_tag}}
+                            {{mechanic_form.pan_no}}
+                        </div>
+                        <div class="col-6">
+                            {{mechanic_profile_form.gender.label_tag}}
+                            {{mechanic_profile_form.gender}}
+                        </div>
+                        
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            {{mechanic_profile_form.birth_date.label_tag}}
+                            {{mechanic_profile_form.birth_date}}
+                        </div>
+                        <div class="col-6">
+                            {{mechanic_profile_form.contact_no.label_tag}}
+                            {{mechanic_profile_form.contact_no}}
+                        </div>
+                        
+                    </div>
+                    <div class="mb-3 row">
+                        <div class="col-6">
+                            {{mechanic_profile_form.latitude.label_tag}}
+                        {{mechanic_profile_form.latitude}}
+                        </div>
+                        <div class="col-6">
+                            {{mechanic_profile_form.longitude.label_tag}}
+                        {{mechanic_profile_form.longitude}}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        {{mechanic_profile_form.services.label_tag}}
+                        {{mechanic_profile_form.services}}
+                    </div>
+                    <button type="submit" class="btn btn-warning">Save</button>
+                </div>
+                <div class="col-3">
+                    
+                    {% if mechanic.mechanic_profile.avatar %}
+                    <img src="{{mechanic.mechanic_profile.avatar.url}}" class="border rounded bg-light img-fluid" style="height: 250px; width: 250px;" />
+                    <a href="{{mechanic.mechanic_profile.avatar.url}}" target="blank">{{mechanic.mechanic_profile.avatar.url}}</a>
+                    {% else %}
+                    <img src="" class="border rounded bg-light img-fluid" style="height: 250px; width: 250px;" />
+                    {% endif %}
+                    
+                        
+                    
+                    <div class="mt-2">
+                        
+                        {{mechanic_profile_form.avatar}}
+                    </div>
+                </div>
+            </div>
+        </form>
+
+</di>
+{% endblock inner_content %}

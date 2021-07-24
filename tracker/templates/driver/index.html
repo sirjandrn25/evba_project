@@ -1,0 +1,377 @@
+{% extends 'driver/layout.html' %}
+
+{% load static %}
+
+{% block inner_content %}
+
+<div class="container mt-3 shadow p-3 mb-5 bg-body rounded" style="height:660px;">
+<!-- Button trigger modal -->
+<button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#exampleModal">
+  send help
+</button>
+
+<!-- Modal -->
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Send Help</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form action="" id="id_send_help_form">
+        {% csrf_token %}
+            {% for field in form %}
+              <div class="mb-3">
+                {{field.label_tag}}
+                {{field}}
+                {% for error in field.errors %}
+                  <small class="text-danger">
+                    {{error}} !!
+                  </small>
+                {% endfor %}
+              </div>
+            {% endfor %}
+            <button class="btn btn-outline-success">Send</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="feedbackModalLabel">Write Your Feedback</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="message_display">
+
+        </div>
+        <form action="" id="id_feedback_form">
+            <div class="mb-3">
+              <textarea class="form-control" name="message" rows="6" placeholder="write your feedback" required></textarea>
+            </div>
+            <button class="btn btn-outline-success">Send</button>
+        </form>
+        <div class="mt-5">
+          <table class="table" id="feedback_table">
+              <thead>
+                  <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Driver</th>
+                    <th scope="col">Feedback</th>
+                   
+                  </tr>
+              </thead>
+              <tbody>
+                 
+              </tbody>
+          </table>
+      </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-4">
+      <table class="table" id="mechanic_table">
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">Mechanic</th>
+            <th scope="col">Distance (meter)</th>
+            <th scope="col">Status</th>
+            
+           
+          </tr>
+        </thead>
+        <tbody>
+         
+         
+        </tbody>
+      </table>
+  </div>
+  <div class="col-8">
+    <div class="border" style="height: 80vh; width: 100%;" id="mymap">
+
+    </div>
+  </div>
+</div>
+
+
+{% endblock inner_content %}
+{% block js_content %}
+  <script>
+    let current_location = {'lat':26.820687079139994,'long':87.29062291301204};
+let csrf = "";
+let time_control = null;
+let data = {};
+let range = 5000;
+
+console.log("hello driver k xa");
+function getLocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(showPosition);
+  } else { 
+    alert("Geolocation is not supported by this browser.");
+  }
+}
+
+function showPosition(position) {
+  
+  current_location['lat'] = position.coords.latitude;
+  current_location['long'] = position.coords.longitude;
+  console.log(current_location)
+  
+}
+// window.onload = getLocation();
+const send_help_form = document.getElementById("id_send_help_form");
+
+
+
+send_help_form.addEventListener("submit",e=>{
+  
+  e.preventDefault();
+  const vehicle_type = e.target.vehicle_type.value;
+  const service = e.target.service.value;
+  const problem_desc = e.target.problem_desc.value;
+  csrf = e.target.csrfmiddlewaretoken.value;
+  
+  data = {
+    vehilce_type:vehicle_type,
+    service:service,
+    problem_desc:problem_desc,
+    curr_driver_lat:current_location['lat'],
+    curr_driver_long:current_location['long'],
+    range:range
+  }
+  sendHelpRequest();
+
+});
+
+const sendHelpRequest=()=>{
+  const url = `http://localhost:8000/tracker/driver/send-help/`;
+  const params = {
+    method:'POST',
+    headers:{
+      "Content-Type":"application/json",
+      "X-CSRFToken":csrf
+    },
+    body:JSON.stringify(data)
+  }
+  fetch(url,params).then(res=>res.json()).then(json_res=>{
+    
+    show_mechanics(json_res);
+    time_waiting_function();
+
+  })
+}
+const time_waiting_function = ()=>{
+  time_control=setTimeout(()=>{
+        
+        change_last_mechanic_status(false);
+        sendAgainHelpRequest();
+  },30000);
+}
+const sendAgainHelpRequest = ()=>{
+    const url = `http://${window.location.host}/tracker/driver/send-help-again/`;
+    fetch(url).then(res=>res.json()).then(json_res=>{
+        
+        data=json_res;
+        console.log(json_res)
+        if (data.status !== 404){
+          show_mechanics(data);
+          time_waiting_function();
+        }
+        else{
+          clearTimeout(time_control);
+          change_last_mechanic_status(false);
+        }
+        
+        
+      
+    }).catch(error=>{
+        console.log(error)
+        clearTimeout(time_control);
+    })
+}
+
+
+
+const url = `ws://${window.location.host}/ws/driver/notifications/`;
+const ws = new WebSocket(url);
+
+ws.onopen = event=>{
+    console.log("connecting ........");
+}
+
+ws.onmessage = event=>{
+  
+    console.log("messaging .....");
+    data = JSON.parse(event.data);
+    console.log(data)
+    change_last_mechanic_status(data.is_mechanic_accept)
+    if(!data.is_mechanic_accept){
+        sendAgainHelpRequest();
+    }
+    else{
+      show_map();
+      
+    }
+    clearTimeout(time_control);
+    
+    
+   
+    
+}
+
+
+ws.onerror = event=>{
+  console.log("error message...");
+}
+ws.onclose = event=>{
+  console.log("closing message ...");
+}
+
+
+const show_mechanics = (data)=>{
+    const mechanic_table = document.getElementById('mechanic_table');
+    const sno = mechanic_table.rows.length+1;
+    console.log(data)
+    const tr = `<tr>
+                    <th scope="row">${sno}</th>
+                    <td>${data.mechanic.full_name}</td>
+                    <td>${data.distance.toFixed(2)}</td>
+                    
+                    <td>
+                        <span class="badge bg-info">sending ...</span>
+                    </td>
+                </tr>`;
+    mechanic_table.innerHTML +=tr;
+
+
+}
+
+const change_last_mechanic_status = (accept_status)=>{
+    
+    const mechanic_table = document.getElementById('mechanic_table');
+    // console.log(mechanic_table.rows)
+    const tr = mechanic_table.rows[mechanic_table.rows.length-1];
+    if(accept_status){
+        tr.cells[tr.cells.length - 1].innerHTML = `<span class="badge bg-success">accept</span>`;
+    }
+    else{
+        tr.cells[tr.cells.length - 1].innerHTML = `<span class="badge bg-warning">cancel</span>`;
+    }
+    
+
+}
+
+let map;
+const show_map =()=>{
+  
+  map = L.map('mymap').setView([current_location.lat,current_location.long], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+    show_routing();
+}
+let routing = null;
+let marker = null;
+const show_routing = ()=>{
+    if(routing){
+      map.removeControl(routing);
+      routing = null;
+    }
+    const driver_latlng = [current_location.lat,current_location.long]
+    let mechanic_latlng = [data.mechanic.mechanic_profile.latitude, data.mechanic.mechanic_profile.longitude]
+    routing = L.Routing.control({
+    
+      waypoints: [
+        L.latLng(driver_latlng),
+        L.latLng(mechanic_latlng)
+      ]
+    }).addTo(map);
+     marker = new L.marker(mechanic_latlng).addTo(map).bindPopup(`<b>Mechanic</b> ${data.mechanic.full_name}<br/>
+     <b>contact no: </b>${data.mechanic.mechanic_profile.contact_no}</br>
+     ${data.mechanic.mechanic_profile.address_name}`).openPopup().on('click',handleFeedback);;
+  
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${driver_latlng[0]}&lon=${driver_latlng[1]}`;
+  
+  fetch(url).then(res=>res.json()).then(json_res=>{
+    const address=json_res.display_name;
+    marker = new L.marker(driver_latlng).addTo(map).bindPopup(`<b>Driver </b>${data.driver.full_name}<br/>${address}`).openPopup();
+  })
+}
+
+const handleFeedback = ()=>{
+    console.log("feedback open");
+    myModal =  new bootstrap.Modal(document.getElementById('feedbackModal'), {
+				  keyboard: false
+					});
+        myModal.show();
+    const url = `http://localhost:8000/tracker/feedback?mechanic=${data.mechanic.id}`;
+          fetch(url).then(res=>res.json()).then(json_res=>{
+        
+              show_feedbacks(json_res);
+          })
+  }
+  const feedbackForm = document.getElementById('id_feedback_form');
+  feedbackForm.addEventListener('submit',e=>{
+    e.preventDefault();
+    const message = e.target.message.value;
+    const mechanic = data['mechanic']['id'];
+    const d = {
+      message:message,
+      mechanic:mechanic
+    }
+    const params = {
+      method:'POST',
+      headers:{
+        "Content-Type":"application/json",
+        "X-CSRFToken":csrf
+      },
+      body:JSON.stringify(d)
+    }
+    const url = `http://localhost:8000/tracker/feedback/`;
+    fetch(url,params).then(resp=>resp.json()).then(json_res=>{
+      e.target.message.value='';
+      document.getElementById('message_display').innerHTML = `<span class="alert alert-info my-3">successfully add feedback</span>`
+
+    }).catch(error=>{
+      console.log(error);
+    })
+
+
+  });
+
+  const show_feedbacks = feedbacks=>{
+        const feedback_table = document.getElementById('feedback_table');
+        let rows = feedback_table.rows.length-1;
+        while(rows){
+            feedback_table.deleteRow(rows);
+            rows--;
+        }
+        
+        let sno = 0;
+          for(let feedback of feedbacks){
+              sno++;
+              feedback_table.innerHTML +=`<tr>
+                                            <td>${sno}</td>
+                                            <td class="text-bold">${feedback.driver.full_name}</td>
+                                            <td>
+                                                <small> ${feedback.message} </small>
+                                            </td>
+                                        </tr>`;
+          }
+          
+      }
+  
+  </script>
+{% endblock js_content %}
+
