@@ -63,7 +63,7 @@
                     <th scope="col">#</th>
                     <th scope="col">Driver</th>
                     <th scope="col">Feedback</th>
-                   
+                    
                   </tr>
               </thead>
               <tbody>
@@ -71,6 +71,26 @@
               </tbody>
           </table>
       </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" tabindex="-1" id="myModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Do you want to search again?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="message">
+
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="AgainSearch(true)">Yes</button>
       </div>
     </div>
   </div>
@@ -110,9 +130,8 @@
 let csrf = "";
 let time_control = null;
 let data = {};
-let range = 5000;
+let range = 1000;
 
-console.log("hello driver k xa");
 function getLocation() {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(showPosition);
@@ -125,7 +144,7 @@ function showPosition(position) {
   
   current_location['lat'] = position.coords.latitude;
   current_location['long'] = position.coords.longitude;
-  console.log(current_location)
+  // console.log(current_location)
   
 }
 // window.onload = getLocation();
@@ -177,20 +196,41 @@ const time_waiting_function = ()=>{
         sendAgainHelpRequest();
   },30000);
 }
+
+const AgainSearch = status=>{
+  if(status){
+    data['range']=data['range']*2;
+    sendHelpRequest();
+  }
+
+}
 const sendAgainHelpRequest = ()=>{
     const url = `http://${window.location.host}/tracker/driver/send-help-again/`;
     fetch(url).then(res=>res.json()).then(json_res=>{
-        
-        data=json_res;
-        console.log(json_res)
-        if (data.status !== 404){
-          show_mechanics(data);
+
+        if (json_res.status !== 404){
+          console.log("show mechanics");
+          show_mechanics(json_res);
           time_waiting_function();
+          
         }
         else{
           clearTimeout(time_control);
           change_last_mechanic_status(false);
+          
+          const myModal =  new bootstrap.Modal(document.getElementById('myModal'), {
+				  keyboard: false
+					});
+          myModal.show();
+          setTimeout(()=>{
+            const message = document.getElementById('message');
+          message.innerHTML = `
+                                        <p>${data['range']} meter range not other mechanic available.</p>
+                                        <p>Do you want to search again in ${data['range']*2} meter range ?</p>
+                                      `;
+          },1000);
         }
+        
         
         
       
@@ -199,7 +239,6 @@ const sendAgainHelpRequest = ()=>{
         clearTimeout(time_control);
     })
 }
-
 
 
 const url = `ws://${window.location.host}/ws/driver/notifications/`;
@@ -212,21 +251,19 @@ ws.onopen = event=>{
 ws.onmessage = event=>{
   
     console.log("messaging .....");
-    data = JSON.parse(event.data);
-    console.log(data)
-    change_last_mechanic_status(data.is_mechanic_accept)
-    if(!data.is_mechanic_accept){
+    const d = JSON.parse(event.data);
+    // console.log(data)
+    change_last_mechanic_status(d.is_mechanic_accept)
+    if(!d.is_mechanic_accept){
         sendAgainHelpRequest();
+
     }
     else{
+      data=d;
       show_map();
       
     }
     clearTimeout(time_control);
-    
-    
-   
-    
 }
 
 
@@ -240,8 +277,8 @@ ws.onclose = event=>{
 
 const show_mechanics = (data)=>{
     const mechanic_table = document.getElementById('mechanic_table');
-    const sno = mechanic_table.rows.length+1;
-    console.log(data)
+    const sno = mechanic_table.rows.length;
+    // console.log(data)
     const tr = `<tr>
                     <th scope="row">${sno}</th>
                     <td>${data.mechanic.full_name}</td>
@@ -310,7 +347,7 @@ const show_routing = ()=>{
 }
 
 const handleFeedback = ()=>{
-    console.log("feedback open");
+    // console.log("feedback open");
     myModal =  new bootstrap.Modal(document.getElementById('feedbackModal'), {
 				  keyboard: false
 					});

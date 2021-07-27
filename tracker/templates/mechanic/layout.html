@@ -103,7 +103,7 @@ ws.onmessage = event=>{
   
     console.log("messaging .....");
     data = JSON.parse(event.data);
-    console.log(data);
+    
     showModel();
     let time = 30;
     time_control = setInterval(()=>{
@@ -218,7 +218,7 @@ const show_routing = ()=>{
   
   fetch(url).then(res=>res.json()).then(json_res=>{
     const address=json_res.display_name;
-    marker = new L.marker(driver_latlng).addTo(map).bindPopup(`<b>Driver </b>${data.driver.full_name}<br/><b>contact no: ${data.driver.driver_profile.contact_no} </b>${data.driver.driver_profile.contact_no}<br/>${address}`).openPopup();
+    marker = new L.marker(driver_latlng).addTo(map).bindPopup(`<b>Driver </b>${data.driver.full_name}<br/><b>contact no: </b>${data.driver.driver_profile.contact_no}<br/>${address}`).openPopup();
   })
 
 

@@ -41,7 +41,9 @@ class SendHelpView(APIView):
         index = request.session['mechanic_list']['index']
         if prev_mechanic_list:
             mechanic_list = [mechanic for mechanic in curr_mechanic_list if mechanic not in prev_mechanic_list]
-            curr_mechanic_list = prev_mechanic_list.extend(mechanic_list)
+            prev_mechanic_list.extend(mechanic_list)
+            curr_mechanic_list = prev_mechanic_list
+            
         new_info = {
             'data':curr_mechanic_list,
             'index':index
@@ -50,11 +52,11 @@ class SendHelpView(APIView):
         request.session['mechanic_list'] = new_info
         running_mechanic_list = request.session['running_mechanic_list']
         if running_mechanic_list:
-            available_mechanic = available_running_mechanic(request)
+            available_mechanic = check_busy_mechanic_available(request)
             
         else:
             available_mechanic = return_not_running_mechanic(request)
-        print(available_mechanic)
+        # print(available_mechanic)
         if available_mechanic:
             mechanic = available_mechanic['mechanic']
             distance = available_mechanic['distance']
@@ -92,7 +94,7 @@ class SendHelpRequestAgain(APIView):
         prev_help_info = request.session['prev_help_info']
         prev_mechanic_id = prev_help_info['mechanic']['id']
         prev_mechanic = Mechanic.objects.get(id=prev_mechanic_id)
-        available_mechanic = available_running_mechanic(request)
+        available_mechanic = check_busy_mechanic_available(request)
         prev_mechanic.mechanic_profile.is_busy=False
         prev_mechanic.mechanic_profile.save()
         
@@ -123,11 +125,14 @@ class SendHelpRequestAgain(APIView):
             request.session['prev_help_info'] =data
             send_notification(room_name=room_name,msg=data)
             return Response(data,status=200)
+        else:
+            return Response(serializer.errors)
 
 
 
 def return_not_running_mechanic(request):
     index = request.session['mechanic_list']['index']
+    
     remaining_mechanic_list = request.session['mechanic_list']['data'][index:]
     running_mechanic_list = request.session['running_mechanic_list']
     available_mechanic = {}
@@ -152,17 +157,17 @@ def return_not_running_mechanic(request):
             'data':mechanic_list,
             'index':index+1
             }
-
+        # print(f"mechanic is availabel{request.session['mechanic_list']}")
         return available_mechanic
     else:
         request.session['mechanic_list'] = {
         'data':mechanic_list,
         'index':index
         }
-
+        # print(f"mechanic is not available{request.session['mechanic_list']}")
         return {}
 
-def available_running_mechanic(request):
+def check_busy_mechanic_available(request):
    
     data = request.session['running_mechanic_list']
     mechanic_info = {}
@@ -191,7 +196,7 @@ def get_mechanic_list(curr_location,search_range):
             'lon':m_p.longitude
         }
         d = distance(curr_location,dest_location)
-        print(dest_location)
+        # print(dest_location)
         if d<=search_range:
             available_mechanic_list.append({
                 'mechanic':m_p.mechanic.id,
